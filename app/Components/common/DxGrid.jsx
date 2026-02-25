@@ -25,7 +25,7 @@ export default function DxGrid({
   columns,
   users = "",
   loading = false,
-  pageSize = 8,
+  pageSize = 20,
 }) {
   const generatedColumns =
     columns && columns.length > 0
