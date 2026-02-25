@@ -24,3 +24,13 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* .dx-datagrid .dx-header-row>td {
+  font-weight: 700 !important;
+  font-size: 16px;
+} */
+
+/* .dx-datagrid .dx-header-row>td {
+  font-weight: 600 !important;
+  font-size: 16px;
+} */
