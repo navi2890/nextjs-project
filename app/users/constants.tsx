@@ -63,3 +63,33 @@ export const columns = [
   { dataField: "gender", caption: "Gender" },
   { dataField: "phone", caption: "PhoneNumber" },
 ];
+export const usersData = [
+  {
+    id: 1,
+    name: "Navjot",
+    age: 24,
+    isActive: true,
+    joiningDate: "2024-01-10",
+  },
+  {
+    id: 2,
+    name: "Aman",
+    age: 28,
+    isActive: false,
+    joiningDate: "2023-05-12",
+  },
+  {
+    id: 3,
+    name: "Parneet",
+    age: 28,
+    isActive: false,
+    joiningDate: "2023-05-18",
+  },
+  {
+    id: 4,
+    name: "Amandeep",
+    age: 28,
+    isActive: false,
+    joiningDate: "2023-05-12",
+  },
+];

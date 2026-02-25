@@ -34,3 +34,38 @@ body {
   font-weight: 600 !important;
   font-size: 16px;
 } */
+
+
+/* Page wrapper */
+.dx-page {
+  padding: 24px;
+  background: #f4f6f9;
+  min-height: 100vh;
+}
+
+/* Title */
+.dx-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #1f2937;
+}
+
+/* Card container */
+.dx-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* Grid header */
+.dx-datagrid-headers {
+  font-weight: 600;
+  background-color: #f1f3f6;
+}
+
+/* Zebra rows */
+.dx-row-alt {
+  background-color: #fafafa;
+}

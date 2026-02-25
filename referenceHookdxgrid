@@ -1,0 +1,300 @@
+import DataGrid, {
+  SearchPanel,
+  Column,
+  Paging,
+  Pager,
+  MasterDetail,
+  Item,
+  Toolbar,
+} from "devextreme-react/cjs/data-grid";
+
+import { Box, Card, CardContent } from "@mui/material";
+import UserDetailsCard from "./UserDetailsCard";
+import useDxGridStore from "@/hooks/useDxGridStore";
+import { useEffect, useMemo, useRef, useState } from "react";
+import SelectBox from "devextreme-react/cjs/select-box";
+import PageHeader from "../common/PageHeader";
+import LoginIcon from "@mui/icons-material/Login";
+import { ADMIN_RESOURCES, USER_RESOURCES } from "@/utils/urlHelper";
+import api from "@/lib/api";
+import useAuthStore from "@/store/useAuthStore";
+import { useRouter } from "next/navigation";
+import { ROLES } from "@/utils/roles";
+import AddUserModal from "./userModal/AddUserDialog";
+
+const UsersList: React.FC = () => {
+  const gridRef = useRef<any>(null);
+  const router = useRouter();
+
+  const { impersonateUser } = useAuthStore();
+  const [statusList, setStatusList] = useState<any[]>([]);
+  const [roleList, setRoleList] = useState<any[]>([]);
+  const [groupList, setGroupList] = useState<any[]>([]);
+  const [accountList, setAccountList] = useState<any[]>([]);
+  const [userStatus, setUserStatus] = useState("");
+  const [openModal, setOpenModal] = useState(false);
+  const [groupBy, setGroupBy] = useState<Record<string, string>>({});
+  const { dbUser } = useAuthStore();
+  const roleId = dbUser?.user_role_id;
+  const authStore = useAuthStore();
+  const canImpersonate = roleId === ROLES.SUPER_ADMIN;
+  const updateUserStatusValue = (e: any) => {
+    setUserStatus(e.value);
+    setGroupBy({ status: e.value });
+  };
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      try {
+        const [statusRes, rolesRes, groupsRes, accountsRes] = await Promise.all(
+          [
+            api.get("/users/status/list"),
+            api.get("/users/roles/list"),
+            api.get("/users/groups/list"),
+            api.get("/users/accounts/list"),
+          ]
+        );
+
+        setStatusList(statusRes.data.data || statusRes.data);
+        setRoleList(rolesRes.data.data || rolesRes.data);
+        setGroupList(groupsRes.data.data || groupsRes.data);
+        setAccountList(accountsRes.data.data || accountsRes.data);
+      } catch (error) {
+        console.error("Error fetching metadata:", error);
+      }
+    };
+    fetchMetadata();
+  }, []);
+
+  const openCreateUserModal = () => {
+    setOpenModal(true);
+  };
+
+  const gridParams = useMemo(() => groupBy, [groupBy]);
+
+  const {
+    customStore,
+    pagerOption,
+    pagingOption,
+    refreshTable,
+    refreshButtonOptions,
+  } = useDxGridStore({
+    loadUrl: ADMIN_RESOURCES.users.list,
+    gridRef,
+    params: gridParams,
+  });
+
+  const addUserButtonOptions = useMemo(
+    () => ({
+      text: "Add user",
+      icon: "plus",
+      type: "default",
+      stylingMode: "contained",
+      width: "auto",
+      onClick: openCreateUserModal,
+    }),
+    []
+  );
+  const handleImpersonate = async (user: any) => {
+    try {
+      const { data } = await api.post(
+        `${ADMIN_RESOURCES.users.impersonate}/${user.cognito_user_name}`
+      );
+      if (data.data) {
+        const token = data.data.token;
+        const { data: userData } = await api.get(USER_RESOURCES.me, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        impersonateUser(token, userData.data).then(() => {
+          if (
+            userData.data.user_role_id == ROLES.MANAGER ||
+            userData.data.user_role_id == ROLES.PARTNER_ADMIN
+          ) {
+            router.replace("/manager/dashboard");
+          } else {
+            router.replace("/user/dashboard");
+          }
+        });
+      }
+    } catch (err) {
+      console.log("Impersonate error: ", err);
+    }
+  };
+
+  return (
+    <>
+      <Box>
+        <PageHeader
+          title="Users"
+          breadcrumbs={[{ label: "Home", href: "/" }, { label: "Users" }]}
+        />
+        <Card elevation={0} sx={styles.cardwrap}>
+          <CardContent>
+            <DataGrid
+              ref={gridRef}
+              dataSource={customStore}
+              showBorders={true}
+              rowAlternationEnabled
+              hoverStateEnabled
+              remoteOperations={true}
+              allowColumnReordering
+              allowColumnResizing
+              columnAutoWidth
+              width="100%"
+              scrolling={{ mode: "standard" }}
+              columnHidingEnabled
+              height="auto"
+              className="pro-dx-grid"
+            >
+              <SearchPanel width={450} visible />
+              <Toolbar>
+                <Item name="searchPanel" location="after" />
+                <Item location="before" locateInMenu="auto">
+                  <SelectBox
+                    width={250}
+                    height={40}
+                    dataSource={statusList}
+                    displayExpr="name"
+                    valueExpr="name"
+                    placeholder="Select User Status"
+                    searchEnabled={true}
+                    onValueChanged={updateUserStatusValue}
+                    value={userStatus}
+                    showClearButton={true}
+                  />
+                </Item>
+                <Item
+                  location="after"
+                  locateInMenu="auto"
+                  showText="inMenu"
+                  widget="dxButton"
+                  options={refreshButtonOptions}
+                />
+                <Item
+                  location="after"
+                  locateInMenu="never"
+                  widget="dxButton"
+                  options={addUserButtonOptions}
+                />
+              </Toolbar>
+              <Column dataField="user_name" caption="Name" hidingPriority={2} />
+
+              <Column
+                dataField="user_email"
+                caption="Email"
+                hidingPriority={1}
+              />
+              <Column
+                dataField="reg_company_name"
+                caption="Company"
+                hidingPriority={0}
+              />
+              <Column
+                dataField="user_phone"
+                caption="Phone Number"
+                hidingPriority={3}
+              />
+
+              <Column
+                dataField="role.name"
+                caption="Role"
+                hidingPriority={3}
+                allowSorting={false}
+              />
+
+              <Column
+                dataField="status.name"
+                caption="Status"
+                cellRender={({ value }) => (
+                  <span
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 999,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      background: value === "Active" ? "#ecfdf5" : "#fef2f2",
+                      color: value === "Active" ? "#047857" : "#b91c1c",
+                    }}
+                  >
+                    {value}
+                  </span>
+                )}
+              />
+
+              <Column
+                caption="Actions"
+                width={80}
+                alignment="center"
+                allowFiltering={false}
+                allowSorting={false}
+                cellRender={({ data }) =>
+                  canImpersonate ? (
+                    <LoginIcon
+                      sx={{
+                        fontSize: 18,
+                        color: "error.main",
+                        cursor: "pointer",
+                        "&:hover": { color: "#b91c1c" },
+                      }}
+                      titleAccess="Impersonate"
+                      onClick={() => handleImpersonate(data)}
+                    />
+                  ) : null
+                }
+              />
+
+              <Paging
+                pageSize={pagingOption.pageSize}
+                enabled={pagingOption.enabled}
+              />
+              <Pager
+                visible={pagerOption.visible}
+                displayMode={pagerOption.displayMode}
+                allowedPageSizes={pagerOption.allowedPageSizes}
+                showPageSizeSelector={pagerOption.showPageSizeSelector}
+                showInfo={pagerOption.showInfo}
+                showNavigationButtons={pagerOption.showNavigationButtons}
+              />
+              <MasterDetail
+                enabled
+                render={({ data }) => (
+                  <UserDetailsCard
+                    data={data}
+                    status={statusList}
+                    roles={roleList}
+                    groups={groupList}
+                    onSave={() => {
+                      refreshTable();
+                      authStore.getPendingUsers();
+                    }}
+                    onDelete={async () => {
+                      await customStore.remove(data.id);
+                      refreshTable();
+                    }}
+                    // onBack={() => gridRef.current?.instance?.collapseAll(-1)}
+                  />
+                )}
+              />
+            </DataGrid>
+          </CardContent>
+        </Card>
+      </Box>
+      {openModal && (
+        <AddUserModal
+          open={openModal}
+          onClose={() => setOpenModal(false)}
+          status={statusList}
+          roles={roleList}
+          groups={groupList}
+          accounts={accountList}
+        />
+      )}
+    </>
+  );
+};
+const styles = {
+  cardwrap: {
+    border: "1px solid #e5e7eb",
+    borderRadius: 2,
+  },
+};
+export default UsersList;
