@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 
 export default function SucessPage() {
   const router = useRouter();
+  console.log("check");
 
   return (
     <Box
